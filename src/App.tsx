@@ -155,6 +155,11 @@ function App() {
     // Don't clear meals when switching tabs - keep them persisted
   }
 
+  const handleMealNotInterested = (mealId: string) => {
+    // Remove the meal from the displayed list
+    setMeals(prevMeals => prevMeals.filter(meal => meal.id !== mealId))
+  }
+
   // Show loading while checking authentication
   if (isCheckingAuth) {
     return (
@@ -209,14 +214,14 @@ function App() {
         <main className="flex-1 py-12 px-4">
           <div className="container mx-auto max-w-7xl">
             {/* Modal for meal planner form */}
-            <Dialog open={showFormModal} onOpenChange={setShowFormModal}>
+            <Dialog open={showFormModal} onOpenChange={setShowFormModal} >
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
+                {/* <DialogHeader>
                   <DialogTitle className="text-2xl font-bold">Plan Your Meals</DialogTitle>
                   <DialogDescription>
                     Tell us how many people you're cooking for and any preferences you have.
                   </DialogDescription>
-                </DialogHeader>
+                </DialogHeader> */}
                 <MealPlannerForm onGenerateMeals={handleGenerateMeals} isLoading={isLoading} />
               </DialogContent>
             </Dialog>
@@ -300,7 +305,7 @@ function App() {
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                       {meals.map((meal) => (
-                        <MealCard key={meal.id} meal={meal} />
+                        <MealCard key={meal.id} meal={meal} onNotInterested={handleMealNotInterested} />
                       ))}
                     </div>
                   </div>

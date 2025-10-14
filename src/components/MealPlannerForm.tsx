@@ -32,7 +32,7 @@ export function MealPlannerForm({ onGenerateMeals, isLoading }: MealPlannerFormP
         </div>
         <CardTitle className="text-3xl">Meal Planner</CardTitle>
         <CardDescription className="text-base">
-          Generate personalized meal ideas and recipes based on the number of people you're cooking for
+          Generate personalized meal ideas and recipes based on the number of people you're cooking for, meal type, and any dietary preferences or restrictions.
         </CardDescription>
       </CardHeader>
       <CardContent>

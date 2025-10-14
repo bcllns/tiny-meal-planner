@@ -2,25 +2,30 @@ import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import type { Meal } from "@/types/meal";
-import { Clock, Users, Menu, Bookmark, BookmarkCheck, Loader2, Printer } from "lucide-react";
+import { Clock, Users, Menu, Bookmark, BookmarkCheck, Loader2, Printer, ThumbsDown } from "lucide-react";
 import { saveRecipe, deleteRecipe, checkIfRecipeSaved } from "@/lib/recipes";
+import { markAsNotInterested, removeFromNotInterested, checkIfNotInterested } from "@/lib/notInterested";
 import { useRecipeContext } from "@/contexts/RecipeContext";
 
 interface MealCardProps {
   meal: Meal;
+  onNotInterested?: (mealId: string) => void;
 }
 
-export function MealCard({ meal }: MealCardProps) {
+export function MealCard({ meal, onNotInterested }: MealCardProps) {
   const [isSaved, setIsSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [isNotInterested, setIsNotInterested] = useState(false);
   const { triggerRefresh } = useRecipeContext();
   const cardRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Check if recipe is already saved
     checkIfRecipeSaved(meal.id).then(setIsSaved);
+    // Check if recipe is marked as not interested
+    checkIfNotInterested(meal.id).then(setIsNotInterested);
   }, [meal.id]);
 
   const handleSaveRecipe = async () => {
@@ -45,6 +50,36 @@ export function MealCard({ meal }: MealCardProps) {
         triggerRefresh(); // Notify SavedRecipes component
       } else {
         setSaveError(result.error || 'Failed to save recipe');
+      }
+    }
+
+    setIsSaving(false);
+  };
+
+  const handleNotInterested = async () => {
+    setIsPopoverOpen(false);
+    setIsSaving(true);
+    setSaveError(null);
+
+    if (isNotInterested) {
+      // Remove from not interested
+      const result = await removeFromNotInterested(meal.id);
+      if (result.success) {
+        setIsNotInterested(false);
+      } else {
+        setSaveError(result.error || 'Failed to update preference');
+      }
+    } else {
+      // Mark as not interested
+      const result = await markAsNotInterested(meal.id, meal.name);
+      if (result.success) {
+        setIsNotInterested(true);
+        // Notify parent component to remove this card from display
+        if (onNotInterested) {
+          onNotInterested(meal.id);
+        }
+      } else {
+        setSaveError(result.error || 'Failed to update preference');
       }
     }
 
@@ -219,6 +254,28 @@ export function MealCard({ meal }: MealCardProps) {
                 >
                   <Printer className="h-4 w-4" />
                   <span>Print</span>
+                </button>
+                <button
+                  onClick={handleNotInterested}
+                  disabled={isSaving}
+                  className="w-full flex items-center gap-3 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors rounded-md text-left disabled:opacity-50"
+                >
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Updating...</span>
+                    </>
+                  ) : isNotInterested ? (
+                    <>
+                      <ThumbsDown className="h-4 w-4 text-gray-600" />
+                      <span>Remove Not Interested</span>
+                    </>
+                  ) : (
+                    <>
+                      <ThumbsDown className="h-4 w-4" />
+                      <span>Not Interested</span>
+                    </>
+                  )}
                 </button>
               </div>
             </PopoverContent>

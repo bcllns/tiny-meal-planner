@@ -1,6 +1,57 @@
 import type { Meal } from "@/types/meal";
+import { getNotInterestedRecipes } from "./notInterested";
+import { getSavedRecipes } from "./recipes";
+import { supabase } from "./supabase";
+import { generateUUID } from "./utils";
 
 const OPENAI_API_KEY = import.meta.env.VITE_OPENAI_API_KEY;
+
+/**
+ * Save OpenAI generated meals to the database for tracking
+ */
+async function saveOpenAIResults(meals: Meal[]): Promise<void> {
+  if (!supabase) {
+    console.warn('Supabase not available, skipping OpenAI results save');
+    return;
+  }
+
+  try {
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    
+    if (authError || !user) {
+      console.warn('User not authenticated, skipping OpenAI results save');
+      return;
+    }
+
+    // Prepare records for insertion
+    const records = meals.map(meal => ({
+      meal_id: generateUUID(), // Generate a proper UUID for each meal
+      name: meal.name,
+      description: meal.description || null,
+      servings: meal.servings,
+      prep_time: meal.prepTime || null,
+      cook_time: meal.cookTime || null,
+      ingredients: meal.ingredients,
+      instructions: meal.instructions,
+      category: meal.category,
+      user_id: user.id
+    }));
+
+    // Insert all records
+    const { error: insertError } = await supabase
+      .from('openai_results')
+      .insert(records);
+
+    if (insertError) {
+      console.error('Error saving OpenAI results:', insertError);
+      // Don't throw - we don't want to fail the meal generation if saving fails
+    }
+  } catch (err) {
+    console.error('Unexpected error saving OpenAI results:', err);
+    // Don't throw - we don't want to fail the meal generation if saving fails
+  }
+}
 
 export async function generateMealPlan(
   numberOfPeople: number, 
@@ -11,6 +62,16 @@ export async function generateMealPlan(
     throw new Error("OpenAI API key is not configured. Please add VITE_OPENAI_API_KEY to your .env file.");
   }
 
+  // Fetch recipes the user is not interested in
+  const notInterestedResult = await getNotInterestedRecipes();
+  const notInterestedRecipes = notInterestedResult.success && notInterestedResult.data 
+    ? notInterestedResult.data.map(recipe => recipe.recipe_name)
+    : [];
+
+  // Fetch recipes the user has already saved
+  const savedRecipes = await getSavedRecipes();
+  const savedRecipeNames = savedRecipes.map(recipe => recipe.name);
+
   // Build the meal type instruction
   const mealTypeInstruction = mealType === "all" 
     ? "Include one breakfast, one lunch, and one dinner option."
@@ -19,6 +80,12 @@ export async function generateMealPlan(
   // Build the notes instruction
   const notesInstruction = notes.trim() 
     ? `\n\nIMPORTANT: Consider these additional requirements: ${notes.trim()}`
+    : "";
+
+  // Build the exclusion instruction for not interested and saved recipes
+  const allExcludedRecipes = [...notInterestedRecipes, ...savedRecipeNames];
+  const exclusionInstruction = allExcludedRecipes.length > 0
+    ? `\n\nIMPORTANT: DO NOT suggest any of these recipes or very similar dishes (the user has either marked them as not interested or already saved them): ${allExcludedRecipes.join(", ")}.`
     : "";
 
   const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -36,7 +103,7 @@ export async function generateMealPlan(
         },
         {
           role: "user",
-          content: `Create 5 different meal ideas with complete recipes for ${numberOfPeople} people. ${mealTypeInstruction}${notesInstruction}
+          content: `Create 5 different meal ideas with complete recipes for ${numberOfPeople} people. ${mealTypeInstruction}${notesInstruction}${exclusionInstruction}
           
 For each meal, provide:
           
@@ -84,6 +151,12 @@ Respond with ONLY a JSON array of meals in this exact format:
 
   try {
     const meals = JSON.parse(content);
+    
+    // Save the OpenAI results to the database (don't await to avoid blocking)
+    saveOpenAIResults(meals).catch(err => {
+      console.error('Failed to save OpenAI results in background:', err);
+    });
+    
     return meals;
   } catch {
     console.error("Failed to parse OpenAI response:", content);
