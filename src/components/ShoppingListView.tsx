@@ -1,83 +1,81 @@
-import { useEffect, useState } from 'react'
-import { 
-  getShoppingList, 
-  clearShoppingList, 
-  getCachedConsolidatedList,
-  setCachedConsolidatedList,
-  hasShoppingListChanged,
-  type ShoppingListItem 
-} from '@/lib/shoppingList'
-import { consolidateIngredients, type ConsolidatedIngredient } from '@/lib/consolidateIngredients'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { ShoppingCart, Trash2, Loader2, AlertCircle, Printer } from 'lucide-react'
+import { useEffect, useState } from "react";
+import { getShoppingList, clearShoppingList, getCachedConsolidatedList, setCachedConsolidatedList, hasShoppingListChanged, type ShoppingListItem } from "@/lib/shoppingList";
+import { consolidateIngredients, type ConsolidatedIngredient } from "@/lib/consolidateIngredients";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ShoppingCart, Trash2, Loader2, AlertCircle, Printer } from "lucide-react";
 
-export function ShoppingListView() {
-  const [items, setItems] = useState<ShoppingListItem[]>([])
-  const [consolidatedList, setConsolidatedList] = useState<ConsolidatedIngredient[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isConsolidating, setIsConsolidating] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [usingCache, setUsingCache] = useState(false)
+interface ShoppingListViewProps {
+  userId?: string | null;
+}
 
-  useEffect(() => {
-    loadShoppingList()
-  }, [])
+export function ShoppingListView({ userId = null }: ShoppingListViewProps) {
+  const [items, setItems] = useState<ShoppingListItem[]>([]);
+  const [consolidatedList, setConsolidatedList] = useState<ConsolidatedIngredient[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isConsolidating, setIsConsolidating] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [usingCache, setUsingCache] = useState(false);
 
   const loadShoppingList = async () => {
-    setIsLoading(true)
-    setError(null)
-    setUsingCache(false)
-    
-    const list = getShoppingList()
-    setItems(list)
+    setIsLoading(true);
+    setError(null);
+    setUsingCache(false);
+
+    const list = getShoppingList(userId);
+    setItems(list);
 
     if (list.length > 0) {
       // Check if we have a valid cached consolidated list
-      const needsConsolidation = hasShoppingListChanged()
-      
+      const needsConsolidation = hasShoppingListChanged(userId);
+
       if (!needsConsolidation) {
         // Use cached list
-        const cache = getCachedConsolidatedList()
+        const cache = getCachedConsolidatedList(userId);
         if (cache && cache.consolidated) {
-          setConsolidatedList(cache.consolidated)
-          setUsingCache(true)
-          setIsLoading(false)
-          return
+          setConsolidatedList(cache.consolidated);
+          setUsingCache(true);
+          setIsLoading(false);
+          return;
         }
       }
 
       // Need to consolidate with OpenAI
-      setIsConsolidating(true)
+      setIsConsolidating(true);
       try {
-        const consolidated = await consolidateIngredients(list)
-        setConsolidatedList(consolidated)
-        
+        const consolidated = await consolidateIngredients(list);
+        setConsolidatedList(consolidated);
+
         // Cache the result
-        const recipeIds = list.map(item => item.recipeId)
-        setCachedConsolidatedList(recipeIds, consolidated)
+        const recipeIds = list.map((item) => item.recipeId);
+        setCachedConsolidatedList(recipeIds, consolidated, userId);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to consolidate ingredients')
+        setError(err instanceof Error ? err.message : "Failed to consolidate ingredients");
       } finally {
-        setIsConsolidating(false)
+        setIsConsolidating(false);
       }
     } else {
-      setConsolidatedList([])
+      setConsolidatedList([]);
     }
 
-    setIsLoading(false)
-  }
+    setIsLoading(false);
+  };
+
+  useEffect(() => {
+    loadShoppingList();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
   const handleClearList = () => {
-    if (window.confirm('Are you sure you want to clear your entire shopping list?')) {
-      clearShoppingList()
-      setItems([])
-      setConsolidatedList([])
+    if (window.confirm("Are you sure you want to clear your entire shopping list?")) {
+      clearShoppingList(userId);
+      setItems([]);
+      setConsolidatedList([]);
     }
-  }
+  };
 
   const handlePrint = () => {
-    const printWindow = window.open('', '', 'width=800,height=600');
+    const printWindow = window.open("", "", "width=800,height=600");
     if (!printWindow) return;
 
     printWindow.document.write(`
@@ -176,28 +174,36 @@ export function ShoppingListView() {
         </head>
         <body>
           <h1>Shopping List</h1>
-          <div class="subtitle">${items.length} recipe${items.length !== 1 ? 's' : ''} • ${consolidatedList.length} ingredient${consolidatedList.length !== 1 ? 's' : ''}</div>
+          <div class="subtitle">${items.length} recipe${items.length !== 1 ? "s" : ""} • ${consolidatedList.length} ingredient${consolidatedList.length !== 1 ? "s" : ""}</div>
           
           <div class="ingredients-grid">
-            ${consolidatedList.map((item, index) => `
+            ${consolidatedList
+              .map(
+                (item, index) => `
               <div class="ingredient-item">
                 <div class="ingredient-number">${index + 1}</div>
                 <div class="ingredient-content">
                   <div class="ingredient-name">${item.quantity} ${item.ingredient}</div>
-                  ${item.notes ? `<div class="ingredient-notes">${item.notes}</div>` : ''}
+                  ${item.notes ? `<div class="ingredient-notes">${item.notes}</div>` : ""}
                 </div>
               </div>
-            `).join('')}
+            `
+              )
+              .join("")}
           </div>
 
           <div class="recipes-section">
             <h2>Recipes</h2>
-            ${items.map(item => `
+            ${items
+              .map(
+                (item) => `
               <div class="recipe-item">
                 <div class="recipe-name">${item.recipeName}</div>
                 <div class="recipe-servings">${item.servings} servings</div>
               </div>
-            `).join('')}
+            `
+              )
+              .join("")}
           </div>
         </body>
       </html>
@@ -209,7 +215,7 @@ export function ShoppingListView() {
       printWindow.print();
       printWindow.close();
     }, 250);
-  }
+  };
 
   if (isLoading) {
     return (
@@ -219,7 +225,7 @@ export function ShoppingListView() {
         </div>
         <p className="text-muted-foreground">Loading your shopping list...</p>
       </div>
-    )
+    );
   }
 
   if (items.length === 0) {
@@ -229,11 +235,9 @@ export function ShoppingListView() {
           <ShoppingCart className="h-10 w-10 text-white" />
         </div>
         <h2 className="text-2xl font-bold mb-2">Your Shopping List is Empty</h2>
-        <p className="text-muted-foreground mb-6">
-          Go to My Recipes and click the list icon on any recipe to add ingredients to your shopping list.
-        </p>
+        <p className="text-muted-foreground mb-6">Go to My Recipes and click the list icon on any recipe to add ingredients to your shopping list.</p>
       </div>
-    )
+    );
   }
 
   return (
@@ -242,25 +246,15 @@ export function ShoppingListView() {
         <div>
           <h2 className="text-3xl font-bold mb-2">Shopping List</h2>
           <p className="text-muted-foreground">
-            {items.length} recipe{items.length !== 1 ? 's' : ''} • 
-            {usingCache ? ' Cached list' : ' AI-consolidated ingredients'}
+            {items.length} recipe{items.length !== 1 ? "s" : ""} •{usingCache ? " Cached list" : " AI-consolidated ingredients"}
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            onClick={handlePrint}
-            variant="outline"
-            className="gap-2"
-            disabled={consolidatedList.length === 0}
-          >
+          <Button onClick={handlePrint} variant="outline" className="gap-2" disabled={consolidatedList.length === 0}>
             <Printer className="h-4 w-4" />
             Print
           </Button>
-          <Button
-            onClick={handleClearList}
-            variant="destructive"
-            className="gap-2"
-          >
+          <Button onClick={handleClearList} variant="destructive" className="gap-2">
             <Trash2 className="h-4 w-4" />
             Clear List
           </Button>
@@ -297,21 +291,17 @@ export function ShoppingListView() {
                 {consolidatedList.map((item, index) => (
                   <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-800/50 group">
                     <div className="flex-shrink-0 w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center">
-                      <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                        {index + 1}
-                      </span>
+                      <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-300">{index + 1}</span>
                     </div>
                     <div className="flex-1 min-w-0">
                       <p className="font-medium text-foreground">
                         {item.quantity} {item.ingredient}
                       </p>
-                      {item.notes && (
-                        <p className="text-xs text-muted-foreground mt-1">{item.notes}</p>
-                      )}
+                      {item.notes && <p className="text-xs text-muted-foreground mt-1">{item.notes}</p>}
                     </div>
                     <button
                       onClick={() => {
-                        setConsolidatedList(consolidatedList.filter((_, i) => i !== index))
+                        setConsolidatedList(consolidatedList.filter((_, i) => i !== index));
                       }}
                       className="flex-shrink-0 p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/20 text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors opacity-0 group-hover:opacity-100"
                       title="Remove item"
@@ -343,9 +333,7 @@ export function ShoppingListView() {
                     </div>
                   </div>
                   <details className="mt-2">
-                    <summary className="text-sm text-emerald-600 dark:text-emerald-400 cursor-pointer hover:underline">
-                      View ingredients ({item.ingredients.length})
-                    </summary>
+                    <summary className="text-sm text-emerald-600 dark:text-emerald-400 cursor-pointer hover:underline">View ingredients ({item.ingredients.length})</summary>
                     <ul className="mt-2 space-y-1 pl-4">
                       {item.ingredients.map((ing, idx) => (
                         <li key={idx} className="text-sm text-muted-foreground">
@@ -361,5 +349,5 @@ export function ShoppingListView() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

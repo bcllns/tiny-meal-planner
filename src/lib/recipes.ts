@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { getCurrentUser } from './auth'
+import { generateUUID } from './utils'
 import type { Meal } from '@/types/meal'
 
 export interface SavedRecipe {
@@ -29,10 +30,13 @@ export async function saveRecipe(meal: Meal): Promise<{ success: boolean; error?
     // Get current user
     const currentUser = await getCurrentUser()
     
+    // Generate a proper UUID for the meal_id
+    const mealId = generateUUID()
+    
     const { error } = await supabase
       .from('recipes')
       .insert({
-        meal_id: meal.id,
+        meal_id: mealId,
         name: meal.name,
         description: meal.description,
         servings: meal.servings,
