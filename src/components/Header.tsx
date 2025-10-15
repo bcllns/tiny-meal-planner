@@ -1,15 +1,16 @@
-import { User, ChefHat, LogOut } from "lucide-react";
+import { User, ChefHat, LogOut, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 interface HeaderProps {
   userName?: string;
   userEmail?: string;
   onSignOut?: () => void;
-  activeTab?: 'dashboard' | 'recipes' | 'shopping';
-  onTabChange?: (tab: 'dashboard' | 'recipes' | 'shopping') => void;
+  activeTab?: "dashboard" | "recipes" | "shopping";
+  onTabChange?: (tab: "dashboard" | "recipes" | "shopping") => void;
+  showGetStarted?: boolean; // New prop for shared views
 }
 
-export function Header({ userName, userEmail, onSignOut, activeTab = 'dashboard', onTabChange }: HeaderProps) {
+export function Header({ userName, userEmail, onSignOut, activeTab = "dashboard", onTabChange, showGetStarted = false }: HeaderProps) {
   return (
     <header className="border-b bg-white dark:bg-slate-900 sticky top-0 z-50 shadow-sm">
       <div className="container mx-auto px-4 py-4">
@@ -21,40 +22,34 @@ export function Header({ userName, userEmail, onSignOut, activeTab = 'dashboard'
                 <ChefHat className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-foreground">Meal Planner</h1>
+                <h1 className="text-xl font-bold text-foreground">Tiny Meal Planner</h1>
                 <p className="text-xs text-muted-foreground">AI-Powered Meal Planning</p>
               </div>
             </div>
 
-            {/* Navigation Tabs */}
-            {onTabChange && (
+            {/* Navigation Tabs - Only show if not in shared/public view */}
+            {onTabChange && !showGetStarted && (
               <nav className="hidden md:flex items-center gap-1">
                 <button
-                  onClick={() => onTabChange('dashboard')}
+                  onClick={() => onTabChange("dashboard")}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activeTab === 'dashboard'
-                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800'
+                    activeTab === "dashboard" ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300" : "text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800"
                   }`}
                 >
                   Dashboard
                 </button>
                 <button
-                  onClick={() => onTabChange('recipes')}
+                  onClick={() => onTabChange("recipes")}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activeTab === 'recipes'
-                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800'
+                    activeTab === "recipes" ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300" : "text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800"
                   }`}
                 >
                   My Recipes
                 </button>
                 <button
-                  onClick={() => onTabChange('shopping')}
+                  onClick={() => onTabChange("shopping")}
                   className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
-                    activeTab === 'shopping'
-                      ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800'
+                    activeTab === "shopping" ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300" : "text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800"
                   }`}
                 >
                   Shopping List
@@ -63,28 +58,29 @@ export function Header({ userName, userEmail, onSignOut, activeTab = 'dashboard'
             )}
           </div>
 
-          {/* User Account Section */}
-          <div className="flex items-center gap-3">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-medium text-foreground">{userName || "Guest User"}</p>
-              <p className="text-xs text-muted-foreground">{userEmail || "Free Plan"}</p>
+          {/* User Account Section or Get Started Button */}
+          {showGetStarted ? (
+            <Button onClick={() => (window.location.href = "/")} className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600">
+              <Sparkles className="h-4 w-4 mr-2" />
+              Get Started Free
+            </Button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-medium text-foreground">{userName || "Guest User"}</p>
+                <p className="text-xs text-muted-foreground">{userEmail || "Free Plan"}</p>
+              </div>
+              {onSignOut ? (
+                <Button variant="outline" size="icon" className="rounded-full" onClick={onSignOut} title="Sign Out">
+                  <LogOut className="h-5 w-5" />
+                </Button>
+              ) : (
+                <Button variant="outline" size="icon" className="rounded-full">
+                  <User className="h-5 w-5" />
+                </Button>
+              )}
             </div>
-            {onSignOut ? (
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="rounded-full"
-                onClick={onSignOut}
-                title="Sign Out"
-              >
-                <LogOut className="h-5 w-5" />
-              </Button>
-            ) : (
-              <Button variant="outline" size="icon" className="rounded-full">
-                <User className="h-5 w-5" />
-              </Button>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </header>

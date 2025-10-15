@@ -9,20 +9,34 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {/* About Section */}
           <div>
-            <h3 className="font-semibold text-foreground mb-3">About Meal Planner</h3>
-            <p className="text-sm text-muted-foreground">
-              AI-powered meal planning application that helps you create delicious meals for any number of people.
-            </p>
+            <h3 className="font-semibold text-foreground mb-3">About Tiny Meal Planner</h3>
+            <p className="text-sm text-muted-foreground">AI-powered meal planning application that helps you create delicious meals for any number of people.</p>
           </div>
 
           {/* Quick Links */}
           <div>
             <h3 className="font-semibold text-foreground mb-3">Quick Links</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
-              <li><a href="#" className="hover:text-foreground transition-colors">How It Works</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">Privacy Policy</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">Terms of Service</a></li>
-              <li><a href="#" className="hover:text-foreground transition-colors">Contact Us</a></li>
+              <li>
+                <a href="#" className="hover:text-foreground transition-colors">
+                  How It Works
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-foreground transition-colors">
+                  Privacy Policy
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-foreground transition-colors">
+                  Terms of Service
+                </a>
+              </li>
+              <li>
+                <a href="#" className="hover:text-foreground transition-colors">
+                  Contact Us
+                </a>
+              </li>
             </ul>
           </div>
 
@@ -30,18 +44,10 @@ export function Footer() {
           <div>
             <h3 className="font-semibold text-foreground mb-3">Connect With Us</h3>
             <div className="flex gap-4">
-              <a 
-                href="#" 
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="GitHub"
-              >
+              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors" aria-label="GitHub">
                 <Github className="h-5 w-5" />
               </a>
-              <a 
-                href="#" 
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Twitter"
-              >
+              <a href="#" className="text-muted-foreground hover:text-foreground transition-colors" aria-label="Twitter">
                 <Twitter className="h-5 w-5" />
               </a>
             </div>

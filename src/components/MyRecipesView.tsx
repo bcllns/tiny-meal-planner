@@ -37,11 +37,12 @@ export function MyRecipesView({ userId = null }: MyRecipesViewProps) {
 
       // Update shopping list status for all recipes
       const inList = new Set<string>();
-      savedRecipes.forEach((recipe) => {
-        if (isInShoppingList(recipe.meal_id, userId)) {
+      for (const recipe of savedRecipes) {
+        const inShoppingList = await isInShoppingList(recipe.meal_id, userId);
+        if (inShoppingList) {
           inList.add(recipe.meal_id);
         }
-      });
+      }
       setShoppingListItems(inList);
 
       setIsLoading(false);
@@ -59,7 +60,7 @@ export function MyRecipesView({ userId = null }: MyRecipesViewProps) {
       setRecipes(recipes.filter((recipe) => recipe.meal_id !== mealId));
       // Also remove from shopping list if present
       if (shoppingListItems.has(mealId)) {
-        removeFromShoppingList(mealId, userId);
+        await removeFromShoppingList(mealId, userId);
         setShoppingListItems((prev) => {
           const newSet = new Set(prev);
           newSet.delete(mealId);
@@ -73,19 +74,19 @@ export function MyRecipesView({ userId = null }: MyRecipesViewProps) {
     setDeletingId(null);
   };
 
-  const handleToggleShoppingList = (recipe: SavedRecipe) => {
+  const handleToggleShoppingList = async (recipe: SavedRecipe) => {
     setOpenPopoverId(null);
     const isInList = shoppingListItems.has(recipe.meal_id);
 
     if (isInList) {
-      removeFromShoppingList(recipe.meal_id, userId);
+      await removeFromShoppingList(recipe.meal_id, userId);
       setShoppingListItems((prev) => {
         const newSet = new Set(prev);
         newSet.delete(recipe.meal_id);
         return newSet;
       });
     } else {
-      const success = addToShoppingList(recipe, userId);
+      const success = await addToShoppingList(recipe, userId);
       if (success) {
         setShoppingListItems((prev) => new Set(prev).add(recipe.meal_id));
       } else {
