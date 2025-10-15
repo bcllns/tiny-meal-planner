@@ -84,9 +84,10 @@ If you prefer to deploy manually:
 
    Use the same key from your `.env` file: `sk-proj-kCE3RPMiRTbM9KG8sRas...`
 
-5. **Deploy the Edge Function**:
+5. **Deploy the Edge Functions**:
    ```bash
    supabase functions deploy generate-meal-plan
+   supabase functions deploy consolidate-ingredients
    ```
 
 ## Testing
@@ -100,10 +101,12 @@ After deployment:
 
 ## Benefits
 
+✅ **No CORS errors**: All requests go through your Supabase backend  
 ✅ **Security**: OpenAI API key is server-side only (never exposed to browser)  
-✅ **No CORS errors**: Requests go through your Supabase backend  
-✅ **Authentication**: Only logged-in users can generate meal plans  
+✅ **Authentication**: Only logged-in users can use AI features  
 ✅ **Automatic tracking**: Generated meals are saved to the database  
+✅ **Production ready**: No more `dangerouslyAllowBrowser` flag  
+✅ **Smaller bundle**: Can remove OpenAI SDK from frontend dependencies  
 ✅ **Better error handling**: Server-side validation and error messages
 
 ## Troubleshooting
@@ -147,10 +150,11 @@ Keep your existing variables:
 
 ## Next Steps
 
-1. Deploy the Edge Function using one of the methods above
-2. Test the meal planner form
+1. Deploy the Edge Functions using one of the methods above
+2. Test the meal planner form and shopping list consolidation
 3. Monitor the Edge Function logs in your Supabase dashboard
 4. (Optional) Remove `VITE_OPENAI_API_KEY` from `.env` after confirming everything works
+5. (Optional) Uninstall OpenAI SDK: `npm uninstall openai`
 
 ## Questions?
 

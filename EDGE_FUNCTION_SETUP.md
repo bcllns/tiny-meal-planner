@@ -1,10 +1,10 @@
 # Edge Function Setup Guide
 
-This guide explains how to deploy the `generate-meal-plan` Edge Function to fix the CORS error when calling OpenAI API.
+This guide explains how to deploy the Edge Functions to fix CORS errors when calling OpenAI API.
 
 ## Problem
 
-Direct calls to OpenAI API from the browser are blocked by CORS (Cross-Origin Resource Sharing) security restrictions. The solution is to use a Supabase Edge Function as a secure proxy.
+Direct calls to OpenAI API from the browser are blocked by CORS (Cross-Origin Resource Sharing) security restrictions. The solution is to use Supabase Edge Functions as secure server-side proxies.
 
 ## Prerequisites
 
@@ -37,10 +37,17 @@ supabase secrets set OPENAI_API_KEY=your_openai_api_key_here
 
 Replace `your_openai_api_key_here` with your actual OpenAI API key.
 
-### 4. Deploy the Edge Function
+### 4. Deploy the Edge Functions
 
 ```bash
 supabase functions deploy generate-meal-plan
+supabase functions deploy consolidate-ingredients
+```
+
+Or use the automated script:
+
+```bash
+./deploy-edge-function.sh
 ```
 
 ### 5. Verify the deployment
@@ -49,6 +56,7 @@ After deployment, you should see output like:
 
 ```
 Deployed Function generate-meal-plan to https://[project-ref].supabase.co/functions/v1/generate-meal-plan
+Deployed Function consolidate-ingredients to https://[project-ref].supabase.co/functions/v1/consolidate-ingredients
 ```
 
 ## Local Development (Optional)
@@ -69,14 +77,22 @@ To test the Edge Function locally:
    supabase start
    ```
 
-4. Serve the function locally:
+4. Serve the functions locally:
+
    ```bash
+   # Serve meal plan function
    supabase functions serve generate-meal-plan --env-file supabase/functions/.env.local
+
+   # Or serve consolidate ingredients function
+   supabase functions serve consolidate-ingredients --env-file supabase/functions/.env.local
    ```
 
 ## Testing
 
-After deployment, test the meal planner form in your app. The error should be resolved, and meal plans should generate successfully.
+After deployment, test both features in your app:
+
+1. **Meal Planner**: Generate a meal plan - should work without CORS errors
+2. **Shopping List**: Add recipes and consolidate - should work without CORS errors
 
 ## Troubleshooting
 
@@ -97,7 +113,7 @@ After deployment, test the meal planner form in your app. The error should be re
 
 ## Environment Variables
 
-The Edge Function uses these environment variables:
+The Edge Functions use these environment variables:
 
 - `OPENAI_API_KEY`: Your OpenAI API key (set via `supabase secrets set`)
 - `SUPABASE_URL`: Automatically provided by Supabase
@@ -107,8 +123,10 @@ The Edge Function uses these environment variables:
 
 The following files were modified:
 
-- `src/lib/openai.ts`: Updated to call the Edge Function instead of OpenAI directly
-- Created: `supabase/functions/generate-meal-plan/index.ts`: Edge Function that proxies OpenAI requests
+- `src/lib/openai.ts`: Updated to call the `generate-meal-plan` Edge Function
+- `src/lib/consolidateIngredients.ts`: Updated to call the `consolidate-ingredients` Edge Function
+- Created: `supabase/functions/generate-meal-plan/index.ts`: Edge Function for meal plan generation
+- Created: `supabase/functions/consolidate-ingredients/index.ts`: Edge Function for shopping list consolidation
 
 ## Benefits
 

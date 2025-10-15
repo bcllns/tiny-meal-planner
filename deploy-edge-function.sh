@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Edge Function Deployment Script
-# This script deploys the generate-meal-plan Edge Function to Supabase
+# This script deploys the Edge Functions to Supabase
 
 set -e
 
-echo "🚀 Deploying Edge Function to Supabase..."
+echo "🚀 Deploying Edge Functions to Supabase..."
 echo ""
 
 # Check if Supabase CLI is installed
@@ -41,8 +41,15 @@ fi
 
 # Deploy the function
 echo ""
-echo "Deploying generate-meal-plan function..."
+echo "Deploying Edge Functions..."
+echo ""
+
+echo "📦 Deploying generate-meal-plan..."
 supabase functions deploy generate-meal-plan
+
+echo ""
+echo "📦 Deploying consolidate-ingredients..."
+supabase functions deploy consolidate-ingredients
 
 echo ""
 echo "✅ Deployment complete!"
