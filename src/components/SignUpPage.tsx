@@ -10,10 +10,9 @@ interface SignUpPageProps {
   onSwitchToSignIn: () => void;
 }
 
-export function SignUpPage({ onSignUp, onSwitchToSignIn }: SignUpPageProps) {
+export function SignUpPage({ onSwitchToSignIn }: SignUpPageProps) {
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -22,27 +21,15 @@ export function SignUpPage({ onSignUp, onSwitchToSignIn }: SignUpPageProps) {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
-    setSuccess(false);
 
-    // Basic validation
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters long");
-      setIsLoading(false);
-      return;
-    }
-
-    const { user, error: signUpError } = await signUp(email, password, fullName);
+    const { error: signUpError } = await signUp(email, fullName);
 
     if (signUpError) {
       setError(signUpError);
       setIsLoading(false);
-    } else if (user) {
+    } else {
       setSuccess(true);
       setIsLoading(false);
-      // Automatically sign in after successful registration
-      setTimeout(() => {
-        onSignUp();
-      }, 2000);
     }
   };
 
@@ -54,20 +41,17 @@ export function SignUpPage({ onSignUp, onSwitchToSignIn }: SignUpPageProps) {
             <ChefHat className="h-8 w-8 text-white" />
           </div>
           <CardTitle className="text-3xl">Create Account</CardTitle>
-          <CardDescription className="text-base">
-            Start planning delicious meals today
-          </CardDescription>
+          <CardDescription className="text-base">Start planning delicious meals today</CardDescription>
         </CardHeader>
         <CardContent>
           {success ? (
             <div className="p-6 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg text-center">
               <CheckCircle className="h-12 w-12 text-emerald-600 dark:text-emerald-400 mx-auto mb-3" />
-              <h3 className="font-semibold text-emerald-800 dark:text-emerald-200 mb-2">
-                Account Created Successfully!
-              </h3>
+              <h3 className="font-semibold text-emerald-800 dark:text-emerald-200 mb-2">Check Your Email!</h3>
               <p className="text-sm text-emerald-700 dark:text-emerald-300">
-                Redirecting you to your dashboard...
+                We've sent a confirmation link to <strong>{email}</strong>
               </p>
+              <p className="text-sm text-emerald-700 dark:text-emerald-300 mt-2">Click the link in the email to confirm your email address and sign in.</p>
             </div>
           ) : (
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -82,66 +66,24 @@ export function SignUpPage({ onSignUp, onSwitchToSignIn }: SignUpPageProps) {
                 <label htmlFor="fullName" className="text-sm font-medium">
                   Full Name
                 </label>
-                <Input
-                  id="fullName"
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="John Doe"
-                  required
-                  disabled={isLoading}
-                  autoComplete="name"
-                />
+                <Input id="fullName" type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="John Doe" required disabled={isLoading} autoComplete="name" />
               </div>
 
               <div className="space-y-2">
                 <label htmlFor="email" className="text-sm font-medium">
                   Email Address
                 </label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  required
-                  disabled={isLoading}
-                  autoComplete="email"
-                />
+                <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" required disabled={isLoading} autoComplete="email" />
               </div>
 
-              <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">
-                  Password
-                </label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  disabled={isLoading}
-                  autoComplete="new-password"
-                  minLength={6}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Must be at least 6 characters long
-                </p>
-              </div>
-
-              <Button 
-                type="submit" 
-                className="w-full h-11" 
-                disabled={isLoading}
-              >
+              <Button type="submit" className="w-full h-11" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Creating account...
+                    Sending confirmation link...
                   </>
                 ) : (
-                  "Create Account"
+                  "Continue with Email"
                 )}
               </Button>
             </form>
@@ -151,10 +93,7 @@ export function SignUpPage({ onSignUp, onSwitchToSignIn }: SignUpPageProps) {
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
                 Already have an account?{" "}
-                <button
-                  onClick={onSwitchToSignIn}
-                  className="text-primary hover:underline font-medium"
-                >
+                <button onClick={onSwitchToSignIn} className="text-primary hover:underline font-medium">
                   Sign in
                 </button>
               </p>

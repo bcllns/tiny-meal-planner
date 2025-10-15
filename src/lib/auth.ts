@@ -81,57 +81,78 @@ export async function getUserProfile(): Promise<UserProfile | null> {
   }
 }
 
-export async function signUp(email: string, password: string, fullName: string) {
+export async function signUp(email: string, fullName: string) {
   if (!supabase) {
-    return { user: null, error: "Supabase is not configured" };
+    return { error: "Supabase is not configured" };
   }
 
   try {
-    const { data, error } = await supabase.auth.signUp({
+    // Send OTP to email with user metadata
+    const { error } = await supabase.auth.signInWithOtp({
       email,
-      password,
       options: {
         data: {
           full_name: fullName,
         },
+        emailRedirectTo: `${window.location.origin}`,
       },
     });
 
     if (error) {
-      return { user: null, error: error.message };
+      return { error: error.message };
     }
 
-    // Note: User profile is automatically created by database trigger
-    // See: database/create_user_profiles_with_trigger.sql
-    console.log("User signed up successfully:", data.user?.email);
-    console.log("Profile will be created automatically by database trigger");
-
-    return { user: data.user, error: null };
+    return { error: null };
   } catch (error) {
     console.error("Sign up error:", error);
-    return { user: null, error: "An unexpected error occurred during sign up" };
+    return { error: "An unexpected error occurred during sign up" };
   }
 }
 
-export async function signIn(email: string, password: string) {
+export async function signIn(email: string) {
   if (!supabase) {
-    return { user: null, error: "Supabase is not configured" };
+    return { error: "Supabase is not configured" };
   }
 
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const { error } = await supabase.auth.signInWithOtp({
       email,
-      password,
+      options: {
+        shouldCreateUser: false,
+      },
     });
 
     if (error) {
-      return { user: null, error: error.message };
+      return { error: error.message };
+    }
+
+    return { error: null };
+  } catch (error) {
+    console.error("Sign in error:", error);
+    return { error: "An unexpected error occurred during sign in" };
+  }
+}
+
+export async function verifyOtp(email: string, token: string) {
+  if (!supabase) {
+    return { error: "Supabase is not configured" };
+  }
+
+  try {
+    const { data, error } = await supabase.auth.verifyOtp({
+      email,
+      token,
+      type: "email",
+    });
+
+    if (error) {
+      return { error: error.message };
     }
 
     return { user: data.user, error: null };
   } catch (error) {
-    console.error("Sign in error:", error);
-    return { user: null, error: "An unexpected error occurred during sign in" };
+    console.error("Verify OTP error:", error);
+    return { error: "An unexpected error occurred while verifying code" };
   }
 }
 
