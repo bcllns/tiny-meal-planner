@@ -25,13 +25,9 @@ export async function getShoppingList(userId: string | null = null): Promise<Sho
   }
 
   try {
-    const { data, error } = await supabase.from("shopping_lists").select("recipe_data").eq("user_id", userId).single();
+    const { data, error } = await supabase.from("shopping_lists").select("recipe_data").eq("user_id", userId).maybeSingle();
 
     if (error) {
-      // If no row exists yet, return empty array
-      if (error.code === "PGRST116") {
-        return [];
-      }
       console.error("Error fetching shopping list:", error);
       return [];
     }
@@ -166,12 +162,9 @@ export async function getCachedConsolidatedList(userId: string | null = null): P
   }
 
   try {
-    const { data, error } = await supabase.from("shopping_lists").select("consolidated_ingredients, recipe_data").eq("user_id", userId).single();
+    const { data, error } = await supabase.from("shopping_lists").select("consolidated_ingredients, recipe_data").eq("user_id", userId).maybeSingle();
 
     if (error) {
-      if (error.code === "PGRST116") {
-        return null;
-      }
       console.error("Error fetching cached consolidated list:", error);
       return null;
     }
