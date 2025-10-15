@@ -266,12 +266,12 @@ function App() {
             {/* Modal for meal planner form */}
             <Dialog open={showFormModal} onOpenChange={setShowFormModal}>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                {/* <DialogHeader>
+                <DialogHeader>
                   <DialogTitle className="text-2xl font-bold">Plan Your Meals</DialogTitle>
                   <DialogDescription>
                     Tell us how many people you're cooking for and any preferences you have.
                   </DialogDescription>
-                </DialogHeader> */}
+                </DialogHeader>
                 <MealPlannerForm onGenerateMeals={handleGenerateMeals} isLoading={isLoading} />
               </DialogContent>
             </Dialog>
