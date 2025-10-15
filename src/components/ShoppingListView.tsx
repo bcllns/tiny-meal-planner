@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { getShoppingList, clearShoppingList, getCachedConsolidatedList, setCachedConsolidatedList, hasShoppingListChanged, type ShoppingListItem } from "@/lib/shoppingList";
+import { getShoppingList, clearShoppingList, getCachedConsolidatedList, setCachedConsolidatedList, hasShoppingListChanged, shareShoppingList, type ShoppingListItem } from "@/lib/shoppingList";
 import { consolidateIngredients, type ConsolidatedIngredient } from "@/lib/consolidateIngredients";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Trash2, Loader2, AlertCircle, Printer } from "lucide-react";
+import { ShoppingCart, Trash2, Loader2, AlertCircle, Printer, Share2 } from "lucide-react";
+import { ShareShoppingListDialog } from "@/components/ShareShoppingListDialog";
 
 interface ShoppingListViewProps {
   userId?: string | null;
@@ -16,22 +17,25 @@ export function ShoppingListView({ userId = null }: ShoppingListViewProps) {
   const [isConsolidating, setIsConsolidating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [usingCache, setUsingCache] = useState(false);
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string>("");
+  const [isSharing, setIsSharing] = useState(false);
 
   const loadShoppingList = async () => {
     setIsLoading(true);
     setError(null);
     setUsingCache(false);
 
-    const list = getShoppingList(userId);
+    const list = await getShoppingList(userId);
     setItems(list);
 
     if (list.length > 0) {
       // Check if we have a valid cached consolidated list
-      const needsConsolidation = hasShoppingListChanged(userId);
+      const needsConsolidation = await hasShoppingListChanged(userId);
 
       if (!needsConsolidation) {
         // Use cached list
-        const cache = getCachedConsolidatedList(userId);
+        const cache = await getCachedConsolidatedList(userId);
         if (cache && cache.consolidated) {
           setConsolidatedList(cache.consolidated);
           setUsingCache(true);
@@ -48,7 +52,7 @@ export function ShoppingListView({ userId = null }: ShoppingListViewProps) {
 
         // Cache the result
         const recipeIds = list.map((item) => item.recipeId);
-        setCachedConsolidatedList(recipeIds, consolidated, userId);
+        await setCachedConsolidatedList(recipeIds, consolidated, userId);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to consolidate ingredients");
       } finally {
@@ -66,11 +70,40 @@ export function ShoppingListView({ userId = null }: ShoppingListViewProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
-  const handleClearList = () => {
+  const handleClearList = async () => {
     if (window.confirm("Are you sure you want to clear your entire shopping list?")) {
-      clearShoppingList(userId);
-      setItems([]);
-      setConsolidatedList([]);
+      const success = await clearShoppingList(userId);
+      if (success) {
+        setItems([]);
+        setConsolidatedList([]);
+      } else {
+        setError("Failed to clear shopping list");
+      }
+    }
+  };
+
+  const handleShare = async () => {
+    if (consolidatedList.length === 0) {
+      setError("Cannot share an empty shopping list");
+      return;
+    }
+
+    setIsSharing(true);
+    setError(null);
+
+    try {
+      const shareId = await shareShoppingList(consolidatedList, userId);
+      if (shareId) {
+        const url = `${window.location.origin}?shoppingList=${shareId}`;
+        setShareUrl(url);
+        setIsShareDialogOpen(true);
+      } else {
+        setError("Failed to generate share link");
+      }
+    } catch {
+      setError("Failed to share shopping list");
+    } finally {
+      setIsSharing(false);
     }
   };
 
@@ -250,6 +283,10 @@ export function ShoppingListView({ userId = null }: ShoppingListViewProps) {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button onClick={handleShare} variant="outline" className="gap-2" disabled={consolidatedList.length === 0 || isSharing}>
+            {isSharing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Share2 className="h-4 w-4" />}
+            Share
+          </Button>
           <Button onClick={handlePrint} variant="outline" className="gap-2" disabled={consolidatedList.length === 0}>
             <Printer className="h-4 w-4" />
             Print
@@ -348,6 +385,8 @@ export function ShoppingListView({ userId = null }: ShoppingListViewProps) {
           </CardContent>
         </Card>
       </div>
+
+      <ShareShoppingListDialog isOpen={isShareDialogOpen} onClose={() => setIsShareDialogOpen(false)} shareUrl={shareUrl} />
     </div>
   );
 }

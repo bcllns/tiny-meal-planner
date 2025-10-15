@@ -11,6 +11,7 @@ import { MyRecipesView } from "@/components/MyRecipesView";
 import { ShoppingListView } from "@/components/ShoppingListView";
 import { PaymentModal } from "@/components/PaymentModal";
 import { SharedRecipeView } from "@/components/SharedRecipeView";
+import { SharedShoppingListView } from "@/components/SharedShoppingListView";
 import { RecipeProvider } from "@/contexts/RecipeContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { generateMealPlan } from "@/lib/openai";
@@ -41,16 +42,22 @@ function App() {
   const [activeTab, setActiveTab] = useState<DashboardTab>("dashboard");
   const [savedRecipeCount, setSavedRecipeCount] = useState(0);
   const [sharedRecipeId, setSharedRecipeId] = useState<string | null>(null);
+  const [sharedShoppingListId, setSharedShoppingListId] = useState<string | null>(null);
 
-  // Check for shared recipe link FIRST (before auth check)
+  // Check for shared recipe link or shared shopping list FIRST (before auth check)
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const shareId = params.get("share");
+    const shoppingListId = params.get("shoppingList");
 
     if (shareId) {
       setSharedRecipeId(shareId);
-      // Clean up URL
-      window.history.replaceState({}, "", window.location.pathname);
+      // Keep the URL parameter so it persists on refresh
+    }
+
+    if (shoppingListId) {
+      setSharedShoppingListId(shoppingListId);
+      // Keep the URL parameter so it persists on refresh
     }
 
     // Check if this is a password recovery link
@@ -212,6 +219,11 @@ function App() {
     setMeals((prevMeals) => prevMeals.filter((meal) => meal.id !== mealId));
   };
 
+  // Show shared shopping list view if shopping list share ID is present (before auth checks)
+  if (sharedShoppingListId) {
+    return <SharedShoppingListView shareId={sharedShoppingListId} />;
+  }
+
   // Show shared recipe view if share ID is present (before auth checks)
   if (sharedRecipeId) {
     return (
@@ -268,9 +280,7 @@ function App() {
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                   <DialogTitle className="text-2xl font-bold">Plan Your Meals</DialogTitle>
-                  <DialogDescription>
-                    Tell us how many people you're cooking for and any preferences you have.
-                  </DialogDescription>
+                  <DialogDescription>Tell us how many people you're cooking for and any preferences you have.</DialogDescription>
                 </DialogHeader>
                 <MealPlannerForm onGenerateMeals={handleGenerateMeals} isLoading={isLoading} />
               </DialogContent>

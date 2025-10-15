@@ -2,8 +2,10 @@ import { useEffect, useState, useRef } from "react";
 import { getSharedRecipe } from "@/lib/shareRecipe";
 import type { Meal } from "@/types/meal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, Users, ArrowLeft, Loader2, Printer, Sparkles } from "lucide-react";
+import { Clock, Users, Loader2, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 
 interface SharedRecipeViewProps {
   shareId: string;
@@ -185,46 +187,33 @@ export function SharedRecipeView({ shareId, onClose }: SharedRecipeViewProps) {
 
   if (error || !recipe) {
     return (
-      <div className="fixed inset-0 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 flex items-center justify-center z-50 p-4">
-        <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center">
-          <div className="text-6xl mb-4">😞</div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Recipe Not Found</h1>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">{error || "This shared recipe link is invalid or has expired."}</p>
-          <Button onClick={onClose} className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600">
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Go Back
-          </Button>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+        <Header showGetStarted={true} />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="max-w-md w-full bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8 text-center mx-4">
+            <div className="text-6xl mb-4">😞</div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Recipe Not Found</h1>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">{error || "This shared recipe link is invalid or has expired."}</p>
+            <Button onClick={onClose} className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600">
+              Go Back
+            </Button>
+          </div>
         </div>
+        <Footer />
       </div>
     );
   }
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800 z-50 overflow-auto">
-      {/* Header */}
-      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-emerald-100 dark:border-gray-800 sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-600 dark:from-emerald-400 dark:to-teal-400 bg-clip-text text-transparent">Shared Recipe</h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Shared by {sharedBy}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button onClick={onClose} variant="outline" size="sm">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Close
-              </Button>
-              <Button onClick={onClose} size="sm" className="bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600">
-                <Sparkles className="h-4 w-4 mr-2" />
-                Get Started Free
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+      <Header showGetStarted={true} />
 
       {/* Recipe Content */}
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* <div className="mb-6">
+          <h2 className="text-3xl font-bold mb-2">Shared Recipe</h2>
+          <p className="text-muted-foreground">Shared by {sharedBy}</p>
+        </div> */}
         <Card ref={cardRef} className="overflow-hidden shadow-xl">
           <CardHeader className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950">
             <div className="flex items-start justify-between">
@@ -280,13 +269,18 @@ export function SharedRecipeView({ shareId, onClose }: SharedRecipeViewProps) {
             </div>
           </CardContent>
         </Card>
+
+        <div className="mt-6 p-4 bg-white/60 dark:bg-gray-900/60 backdrop-blur-sm rounded-lg border border-emerald-100 dark:border-gray-800">
+          <p className="text-sm text-gray-600 dark:text-gray-400 text-center">
+            This recipe was shared with you. Want to create your own meal plans?{" "}
+            <a href="/" className="text-emerald-600 dark:text-emerald-400 hover:underline font-medium">
+              Get started free
+            </a>
+          </p>
+        </div>
       </main>
 
-      {/* Footer */}
-      <footer className="mt-12 pb-8 text-center text-sm text-gray-600 dark:text-gray-400">
-        <p>Powered by Tiny Meal Planner</p>
-        <p className="mt-1">Made with 😊 in WLV by Tiny Dev Co.</p>
-      </footer>
+      <Footer />
     </div>
   );
 }
