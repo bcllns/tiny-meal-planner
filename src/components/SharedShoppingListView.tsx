@@ -13,7 +13,7 @@ interface SharedShoppingListViewProps {
 
 export function SharedShoppingListView({ shareId }: SharedShoppingListViewProps) {
   const [consolidatedList, setConsolidatedList] = useState<ConsolidatedIngredient[]>([]);
-  const [sharedBy, setSharedBy] = useState<string>("");
+  //const [sharedBy, setSharedBy] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +26,7 @@ export function SharedShoppingListView({ shareId }: SharedShoppingListViewProps)
         const result = await getSharedShoppingList(shareId);
         if (result) {
           setConsolidatedList(result.consolidatedIngredients);
-          setSharedBy(result.sharedBy);
+          //setSharedBy(result.sharedBy);
         } else {
           setError("Shopping list not found or has been deleted");
         }
