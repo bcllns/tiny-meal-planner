@@ -253,7 +253,7 @@ export function SharedShoppingListView({ shareId }: SharedShoppingListViewProps)
         </div>
       </main>
 
-      <Footer />
+      <Footer onHowItWorks={() => (window.location.href = "/how-it-works")} onPrivacyPolicy={() => (window.location.href = "/privacy-policy")} onTermsOfService={() => (window.location.href = "/terms-of-service")} />
     </div>
   );
 }

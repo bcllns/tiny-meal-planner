@@ -267,3 +267,31 @@ export async function updatePassword(newPassword: string) {
     return { error: "An unexpected error occurred while updating password" };
   }
 }
+
+export async function markTutorialAsShown(): Promise<{ error: string | null }> {
+  if (!supabase) {
+    return { error: "Supabase is not configured" };
+  }
+
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { error: "User not authenticated" };
+    }
+
+    const { error } = await supabase.from("user_profiles").update({ tutorial_shown: true }).eq("user_id", user.id);
+
+    if (error) {
+      console.error("Error marking tutorial as shown:", error);
+      return { error: error.message };
+    }
+
+    return { error: null };
+  } catch (error) {
+    console.error("Mark tutorial as shown error:", error);
+    return { error: "An unexpected error occurred" };
+  }
+}

@@ -5,6 +5,9 @@ import { LandingPage } from "@/components/LandingPage";
 import { SignInPage } from "@/components/SignInPage";
 import { SignUpPage } from "@/components/SignUpPage";
 import { ResetPasswordPage } from "@/components/ResetPasswordPage";
+import { HowItWorksPage } from "@/components/HowItWorksPage";
+import { PrivacyPolicyPage } from "@/components/PrivacyPolicyPage";
+import { TermsOfServicePage } from "@/components/TermsOfServicePage";
 import { MealPlannerForm } from "@/components/MealPlannerForm";
 import { MealCard } from "@/components/MealCard";
 import { MyRecipesView } from "@/components/MyRecipesView";
@@ -12,20 +15,21 @@ import { ShoppingListView } from "@/components/ShoppingListView";
 import { PaymentModal } from "@/components/PaymentModal";
 import { SharedRecipeView } from "@/components/SharedRecipeView";
 import { SharedShoppingListView } from "@/components/SharedShoppingListView";
+import { TutorialDialog } from "@/components/TutorialDialog";
 import { RecipeProvider } from "@/contexts/RecipeContext";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { generateMealPlan } from "@/lib/openai";
-import { getCurrentUser, signOut, onAuthStateChange, getUserProfile } from "@/lib/auth";
+import { getCurrentUser, signOut, onAuthStateChange, getUserProfile, markTutorialAsShown } from "@/lib/auth";
 import { getSavedRecipes } from "@/lib/recipes";
 import { clearShoppingList } from "@/lib/shoppingList";
-import { canGenerateMeals, markTrialAsUsed } from "@/lib/subscription";
+import { canGenerateMeals, incrementMealPlanCount } from "@/lib/subscription";
 import type { Meal } from "@/types/meal";
 import type { User } from "@supabase/supabase-js";
 import type { UserProfile } from "@/types/user";
-import { AlertCircle, RefreshCw, ChefHat } from "lucide-react";
+import { AlertCircle, RefreshCw, ChefHat, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-type AuthView = "landing" | "signin" | "signup" | "dashboard" | "reset-password";
+type AuthView = "landing" | "signin" | "signup" | "dashboard" | "reset-password" | "how-it-works" | "privacy-policy" | "terms-of-service";
 type DashboardTab = "dashboard" | "recipes" | "shopping";
 
 function App() {
@@ -39,6 +43,7 @@ function App() {
   const [showFormModal, setShowFormModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showPaymentSuccessDialog, setShowPaymentSuccessDialog] = useState(false);
+  const [showTutorialDialog, setShowTutorialDialog] = useState(false);
   const [activeTab, setActiveTab] = useState<DashboardTab>("dashboard");
   const [savedRecipeCount, setSavedRecipeCount] = useState(0);
   const [sharedRecipeId, setSharedRecipeId] = useState<string | null>(null);
@@ -58,6 +63,16 @@ function App() {
     if (shoppingListId) {
       setSharedShoppingListId(shoppingListId);
       // Keep the URL parameter so it persists on refresh
+    }
+
+    // Check for content pages by path
+    const path = window.location.pathname;
+    if (path === "/how-it-works") {
+      setCurrentView("how-it-works");
+    } else if (path === "/privacy-policy") {
+      setCurrentView("privacy-policy");
+    } else if (path === "/terms-of-service") {
+      setCurrentView("terms-of-service");
     }
 
     // Check if this is a password recovery link
@@ -88,13 +103,20 @@ function App() {
       const currentUser = await getCurrentUser();
       setUser(currentUser);
       if (currentUser) {
-        // Don't override if we're already on the reset-password view
-        if (currentView !== "reset-password") {
+        // Don't override if we're already on specific views
+        const protectedViews: AuthView[] = ["reset-password", "how-it-works", "privacy-policy", "terms-of-service"];
+        if (!protectedViews.includes(currentView)) {
           setCurrentView("dashboard");
         }
         // Fetch user profile
         const profile = await getUserProfile();
         setUserProfile(profile);
+
+        // Show tutorial dialog if user hasn't seen it yet
+        if (profile && !profile.tutorial_shown) {
+          setShowTutorialDialog(true);
+        }
+
         // Fetch saved recipe count
         const recipes = await getSavedRecipes();
         setSavedRecipeCount(recipes.length);
@@ -108,13 +130,20 @@ function App() {
     const { unsubscribe } = onAuthStateChange(async (authUser) => {
       setUser(authUser);
       if (authUser) {
-        // Don't override if we're already on the reset-password view
-        if (currentView !== "reset-password") {
+        // Don't override if we're already on specific views
+        const protectedViews: AuthView[] = ["reset-password", "how-it-works", "privacy-policy", "terms-of-service"];
+        if (!protectedViews.includes(currentView)) {
           setCurrentView("dashboard");
         }
         // Fetch user profile when user signs in
         const profile = await getUserProfile();
         setUserProfile(profile);
+
+        // Show tutorial dialog if user hasn't seen it yet
+        if (profile && !profile.tutorial_shown) {
+          setShowTutorialDialog(true);
+        }
+
         // Fetch saved recipe count
         const recipes = await getSavedRecipes();
         setSavedRecipeCount(recipes.length);
@@ -168,6 +197,18 @@ function App() {
     setMeals([]);
   };
 
+  const handleTutorialClose = async () => {
+    setShowTutorialDialog(false);
+    // Mark tutorial as shown in the database
+    if (user?.id) {
+      await markTutorialAsShown();
+      // Update local profile state
+      if (userProfile) {
+        setUserProfile({ ...userProfile, tutorial_shown: true });
+      }
+    }
+  };
+
   const handleGenerateMeals = async (numberOfPeople: number, mealType: string, notes: string) => {
     setIsLoading(true);
     setError(null);
@@ -178,11 +219,17 @@ function App() {
       setMeals(generatedMeals);
       setShowFormModal(false); // Close modal after generating meals
 
-      // Mark trial as used after first successful meal generation
-      if (user?.id && userProfile && !userProfile.trial_used) {
-        await markTrialAsUsed(user.id);
-        // Update local profile state
-        setUserProfile({ ...userProfile, trial_used: true });
+      // Increment meal plan count after successful generation
+      if (user?.id && userProfile) {
+        const { success, newCount } = await incrementMealPlanCount(user.id);
+        if (success && newCount !== undefined) {
+          // Update local profile state
+          setUserProfile({
+            ...userProfile,
+            meal_plans_generated: newCount,
+            trial_used: newCount >= 2, // Mark trial as used when limit reached
+          });
+        }
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate meal plan. Please try again.");
@@ -249,7 +296,24 @@ function App() {
 
   // Show landing page
   if (currentView === "landing") {
-    return <LandingPage onGetStarted={() => setCurrentView("signup")} />;
+    return (
+      <LandingPage onGetStarted={() => setCurrentView("signup")} onHowItWorks={() => setCurrentView("how-it-works")} onPrivacyPolicy={() => setCurrentView("privacy-policy")} onTermsOfService={() => setCurrentView("terms-of-service")} />
+    );
+  }
+
+  // Show how it works page
+  if (currentView === "how-it-works") {
+    return <HowItWorksPage onBack={() => setCurrentView("landing")} onGetStarted={() => setCurrentView("signup")} />;
+  }
+
+  // Show privacy policy page
+  if (currentView === "privacy-policy") {
+    return <PrivacyPolicyPage onBack={() => setCurrentView("landing")} />;
+  }
+
+  // Show terms of service page
+  if (currentView === "terms-of-service") {
+    return <TermsOfServicePage onBack={() => setCurrentView("landing")} />;
   }
 
   // Show sign in page
@@ -275,6 +339,9 @@ function App() {
 
         <main className="flex-1 py-12 px-4">
           <div className="container mx-auto max-w-7xl">
+            {/* Tutorial Dialog */}
+            <TutorialDialog open={showTutorialDialog} onClose={handleTutorialClose} />
+
             {/* Modal for meal planner form */}
             <Dialog open={showFormModal} onOpenChange={setShowFormModal}>
               <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -374,6 +441,18 @@ function App() {
                       <ChefHat className="h-5 w-5" />
                       Plan Meals
                     </Button>
+
+                    {/* Free trial indicator */}
+                    {userProfile && !userProfile.subscription_status && (
+                      <div className="mt-6 text-sm text-muted-foreground">
+                        {userProfile.meal_plans_generated !== undefined && userProfile.meal_plans_generated < 2 ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-full border border-emerald-200 dark:border-emerald-800">
+                            <Sparkles className="h-3.5 w-3.5" />
+                            {2 - (userProfile.meal_plans_generated || 0)} free meal plan{2 - (userProfile.meal_plans_generated || 0) === 1 ? "" : "s"} remaining
+                          </span>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
                 )}
               </>
@@ -387,7 +466,7 @@ function App() {
           </div>
         </main>
 
-        <Footer />
+        <Footer onHowItWorks={() => (window.location.href = "/how-it-works")} onPrivacyPolicy={() => (window.location.href = "/privacy-policy")} onTermsOfService={() => (window.location.href = "/terms-of-service")} />
       </div>
     </RecipeProvider>
   );
