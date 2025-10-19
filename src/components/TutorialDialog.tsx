@@ -74,7 +74,7 @@ export function TutorialDialog({ open, onClose }: TutorialDialogProps) {
           {/* Trial information */}
           <div className="bg-primary/5 border border-primary/20 rounded-lg p-4 mt-6">
             <p className="text-sm text-foreground">
-              <span className="font-semibold">Free Trial:</span> You can generate meal plans <span className="font-bold text-primary">twice for free</span> to try out Tiny Meal Planner. After that, a subscription is required to continue
+              <span className="font-semibold">Free Trial:</span> You have a <span className="font-bold text-primary">7-day free trial</span> to try out Tiny Meal Planner with unlimited meal plan generation. After your trial expires, a subscription is required to continue
               creating new meal plans.
             </p>
           </div>

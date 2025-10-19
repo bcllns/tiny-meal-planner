@@ -22,7 +22,7 @@ import { generateMealPlan } from "@/lib/openai";
 import { getCurrentUser, signOut, onAuthStateChange, getUserProfile, markTutorialAsShown } from "@/lib/auth";
 import { getSavedRecipes } from "@/lib/recipes";
 import { clearShoppingList } from "@/lib/shoppingList";
-import { canGenerateMeals, incrementMealPlanCount } from "@/lib/subscription";
+import { canGenerateMeals, incrementMealPlanCount, getTrialExpiryDate, isTrialExpired } from "@/lib/subscription";
 import type { Meal } from "@/types/meal";
 import type { User } from "@supabase/supabase-js";
 import type { UserProfile } from "@/types/user";
@@ -223,11 +223,15 @@ function App() {
       if (user?.id && userProfile) {
         const { success, newCount } = await incrementMealPlanCount(user.id);
         if (success && newCount !== undefined) {
+          // Check if trial has expired based on date
+          const trialStartDate = userProfile.trial_start_date || new Date().toISOString();
+          const trialExpired = isTrialExpired(trialStartDate);
+          
           // Update local profile state
           setUserProfile({
             ...userProfile,
             meal_plans_generated: newCount,
-            trial_used: newCount >= 2, // Mark trial as used when limit reached
+            trial_used: trialExpired,
           });
         }
       }
@@ -443,12 +447,12 @@ function App() {
                     </Button>
 
                     {/* Free trial indicator */}
-                    {userProfile && !userProfile.subscription_status && (
+                    {userProfile && !userProfile.subscription_status && userProfile.trial_start_date && (
                       <div className="mt-6 text-sm text-muted-foreground">
-                        {userProfile.meal_plans_generated !== undefined && userProfile.meal_plans_generated < 2 ? (
+                        {!isTrialExpired(userProfile.trial_start_date) ? (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-full border border-emerald-200 dark:border-emerald-800">
                             <Sparkles className="h-3.5 w-3.5" />
-                            {2 - (userProfile.meal_plans_generated || 0)} free meal plan{2 - (userProfile.meal_plans_generated || 0) === 1 ? "" : "s"} remaining
+                            Free trial expires {getTrialExpiryDate(userProfile.trial_start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                           </span>
                         ) : null}
                       </div>

@@ -6,6 +6,7 @@ export interface UserProfile {
   email: string;
   full_name: string;
   trial_used: boolean;
+  trial_start_date: string;
   meal_plans_generated: number;
   subscription_status: string | null;
   subscription_id: string | null;
@@ -14,17 +15,48 @@ export interface UserProfile {
   created_at: string;
 }
 
-const FREE_MEAL_PLAN_LIMIT = 2;
+const TRIAL_DURATION_DAYS = 7;
 
 /**
- * Check if user can generate meals (either has active subscription or hasn't reached free limit)
+ * Calculate how many days are remaining in the trial
  */
-export async function canGenerateMeals(userId: string): Promise<{ canGenerate: boolean; reason?: string; remainingFreePlans?: number }> {
+export function getTrialDaysRemaining(trialStartDate: string): number {
+  const startDate = new Date(trialStartDate);
+  const expiryDate = new Date(startDate);
+  expiryDate.setDate(expiryDate.getDate() + TRIAL_DURATION_DAYS);
+  
+  const now = new Date();
+  const daysRemaining = Math.ceil((expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  
+  return Math.max(0, daysRemaining);
+}
+
+/**
+ * Get the trial expiry date
+ */
+export function getTrialExpiryDate(trialStartDate: string): Date {
+  const startDate = new Date(trialStartDate);
+  const expiryDate = new Date(startDate);
+  expiryDate.setDate(expiryDate.getDate() + TRIAL_DURATION_DAYS);
+  return expiryDate;
+}
+
+/**
+ * Check if user's trial has expired
+ */
+export function isTrialExpired(trialStartDate: string): boolean {
+  return getTrialDaysRemaining(trialStartDate) <= 0;
+}
+
+/**
+ * Check if user can generate meals (either has active subscription or trial hasn't expired)
+ */
+export async function canGenerateMeals(userId: string): Promise<{ canGenerate: boolean; reason?: string; trialDaysRemaining?: number; trialExpiryDate?: Date }> {
   if (!supabase) {
     return { canGenerate: false, reason: "Database connection unavailable" };
   }
 
-  const { data: profile, error } = await supabase.from("user_profiles").select("meal_plans_generated, subscription_status, subscription_end_date").eq("user_id", userId).single();
+  const { data: profile, error } = await supabase.from("user_profiles").select("trial_start_date, subscription_status, subscription_end_date").eq("user_id", userId).single();
 
   if (error || !profile) {
     return { canGenerate: false, reason: "Unable to verify subscription status" };
@@ -44,16 +76,20 @@ export async function canGenerateMeals(userId: string): Promise<{ canGenerate: b
     return { canGenerate: true };
   }
 
-  // Check if user still has free meal plans available
-  const generatedCount = profile.meal_plans_generated || 0;
-  if (generatedCount < FREE_MEAL_PLAN_LIMIT) {
+  // Check if user's trial is still active
+  const trialStartDate = profile.trial_start_date || new Date().toISOString();
+  const daysRemaining = getTrialDaysRemaining(trialStartDate);
+  const expiryDate = getTrialExpiryDate(trialStartDate);
+  
+  if (daysRemaining > 0) {
     return {
       canGenerate: true,
-      remainingFreePlans: FREE_MEAL_PLAN_LIMIT - generatedCount,
+      trialDaysRemaining: daysRemaining,
+      trialExpiryDate: expiryDate,
     };
   }
 
-  return { canGenerate: false, reason: `You've used your ${FREE_MEAL_PLAN_LIMIT} free meal plans - subscription required` };
+  return { canGenerate: false, reason: "Your 7-day trial has expired - subscription required" };
 }
 
 /**
@@ -62,8 +98,8 @@ export async function canGenerateMeals(userId: string): Promise<{ canGenerate: b
 export async function incrementMealPlanCount(userId: string): Promise<{ success: boolean; newCount?: number }> {
   if (!supabase) return { success: false };
 
-  // First get the current count
-  const { data: profile, error: fetchError } = await supabase.from("user_profiles").select("meal_plans_generated").eq("user_id", userId).single();
+  // First get the current count and trial start date
+  const { data: profile, error: fetchError } = await supabase.from("user_profiles").select("meal_plans_generated, trial_start_date").eq("user_id", userId).single();
 
   if (fetchError || !profile) {
     return { success: false };
@@ -72,11 +108,15 @@ export async function incrementMealPlanCount(userId: string): Promise<{ success:
   const currentCount = profile.meal_plans_generated || 0;
   const newCount = currentCount + 1;
 
+  // Check if trial has expired based on date
+  const trialStartDate = profile.trial_start_date || new Date().toISOString();
+  const trialExpired = isTrialExpired(trialStartDate);
+
   const { error: updateError } = await supabase
     .from("user_profiles")
     .update({
       meal_plans_generated: newCount,
-      trial_used: newCount >= FREE_MEAL_PLAN_LIMIT, // Also mark trial as used when limit reached
+      trial_used: trialExpired, // Mark trial as used if expired
     })
     .eq("user_id", userId);
 

@@ -40,6 +40,7 @@ export async function getUserProfile(): Promise<UserProfile | null> {
             email: user.email || "",
             full_name: fullName,
             trial_used: false,
+            trial_start_date: new Date().toISOString(),
             subscription_status: null,
             subscription_id: null,
             stripe_customer_id: null,
@@ -57,6 +58,7 @@ export async function getUserProfile(): Promise<UserProfile | null> {
             full_name: fullName,
             created_at: user.created_at,
             trial_used: false,
+            trial_start_date: new Date().toISOString(),
           };
         }
 
@@ -71,6 +73,7 @@ export async function getUserProfile(): Promise<UserProfile | null> {
         full_name: fullName,
         created_at: user.created_at,
         trial_used: false,
+        trial_start_date: new Date().toISOString(),
       };
     }
 
