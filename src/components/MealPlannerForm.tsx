@@ -45,7 +45,7 @@ export function MealPlannerForm({ onGenerateMeals, isLoading }: MealPlannerFormP
               id="numberOfPeople"
               type="number"
               min="1"
-              max="50"
+              max="10"
               value={numberOfPeople}
               onChange={(e) => setNumberOfPeople(e.target.value)}
               placeholder="Enter number of people"
@@ -53,7 +53,7 @@ export function MealPlannerForm({ onGenerateMeals, isLoading }: MealPlannerFormP
               disabled={isLoading}
             />
             <p className="text-xs text-muted-foreground">
-              Enter a number between 1 and 50
+              Enter a number between 1 and 10
             </p>
           </div>
 
@@ -67,13 +67,13 @@ export function MealPlannerForm({ onGenerateMeals, isLoading }: MealPlannerFormP
               onChange={(e) => setMealType(e.target.value)}
               disabled={isLoading}
             >
-              <option value="all">All Meals (Breakfast, Lunch, Dinner)</option>
-              <option value="breakfast">Breakfast Only</option>
-              <option value="lunch">Lunch Only</option>
-              <option value="dinner">Dinner Only</option>
+              {/* <option value="all">All Meals (Breakfast, Lunch, Dinner)</option> */}
+              <option value="breakfast">Breakfast </option>
+              <option value="lunch">Lunch</option>
+              <option value="dinner">Dinner</option>
             </Select>
             <p className="text-xs text-muted-foreground">
-              Select which meal(s) you want to plan
+              Select which meal you want to plan
             </p>
           </div>
 
