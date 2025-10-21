@@ -26,7 +26,7 @@ import { canGenerateMeals, incrementMealPlanCount, getTrialExpiryDate, isTrialEx
 import type { Meal } from "@/types/meal";
 import type { User } from "@supabase/supabase-js";
 import type { UserProfile } from "@/types/user";
-import { AlertCircle, RefreshCw, ChefHat, Sparkles } from "lucide-react";
+import { AlertCircle, RefreshCw, ChefHat, Sparkles, RotateCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type AuthView = "landing" | "signin" | "signup" | "dashboard" | "reset-password" | "how-it-works" | "privacy-policy" | "terms-of-service";
@@ -48,6 +48,13 @@ function App() {
   const [savedRecipeCount, setSavedRecipeCount] = useState(0);
   const [sharedRecipeId, setSharedRecipeId] = useState<string | null>(null);
   const [sharedShoppingListId, setSharedShoppingListId] = useState<string | null>(null);
+  
+  // Store last meal plan parameters for "Show Me More" functionality
+  const [lastMealPlanParams, setLastMealPlanParams] = useState<{
+    numberOfPeople: number;
+    mealType: string;
+    notes: string;
+  } | null>(null);
 
   // Check for shared recipe link or shared shopping list FIRST (before auth check)
   useEffect(() => {
@@ -209,15 +216,29 @@ function App() {
     }
   };
 
-  const handleGenerateMeals = async (numberOfPeople: number, mealType: string, notes: string) => {
+  const handleGenerateMeals = async (numberOfPeople: number, mealType: string, notes: string, keepExisting: boolean = false) => {
     setIsLoading(true);
     setError(null);
-    setMeals([]);
+    
+    // Only clear meals if we're not keeping existing ones
+    if (!keepExisting) {
+      setMeals([]);
+    }
 
     try {
       const generatedMeals = await generateMealPlan(numberOfPeople, mealType, notes);
-      setMeals(generatedMeals);
+      
+      // If keeping existing, append new meals; otherwise replace
+      if (keepExisting) {
+        setMeals(prevMeals => [...prevMeals, ...generatedMeals]);
+      } else {
+        setMeals(generatedMeals);
+      }
+      
       setShowFormModal(false); // Close modal after generating meals
+      
+      // Store the parameters for "Show Me More" functionality
+      setLastMealPlanParams({ numberOfPeople, mealType, notes });
 
       // Increment meal plan count after successful generation
       if (user?.id && userProfile) {
@@ -241,6 +262,30 @@ function App() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleShowMeMore = async () => {
+    if (!lastMealPlanParams) return;
+    
+    // Check if user can generate meals before proceeding
+    if (user?.id) {
+      const { canGenerate, reason } = await canGenerateMeals(user.id);
+
+      if (!canGenerate) {
+        // Trial expired or no subscription - show payment modal
+        setShowPaymentModal(true);
+        setError(reason || "Subscription required");
+        return;
+      }
+    }
+    
+    // Resubmit with the same parameters, keeping existing meals
+    await handleGenerateMeals(
+      lastMealPlanParams.numberOfPeople,
+      lastMealPlanParams.mealType,
+      lastMealPlanParams.notes,
+      true // keepExisting = true
+    );
   };
 
   const handlePlanMeals = async () => {
@@ -423,6 +468,22 @@ function App() {
                         <MealCard key={meal.id} meal={meal} onNotInterested={handleMealNotInterested} />
                       ))}
                     </div>
+                    
+                    {/* Show Me More button */}
+                    {lastMealPlanParams && (
+                      <div className="flex justify-center mt-8">
+                        <Button 
+                          onClick={handleShowMeMore} 
+                          disabled={isLoading}
+                          variant="outline" 
+                          size="lg"
+                          className="gap-2 px-8"
+                        >
+                          <RotateCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                          {isLoading ? 'Generating...' : 'Show Me More'}
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 )}
 
