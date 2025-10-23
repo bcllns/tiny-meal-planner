@@ -33,7 +33,7 @@ export function PaymentModal({ isOpen, onClose, userEmail, userId, isTrialUsed }
             <CreditCard className="h-5 w-5 text-emerald-600" />
             Subscribe to Meal Planner
           </DialogTitle>
-          <DialogDescription>{isTrialUsed ? "Your 7-day free trial has expired. Subscribe to continue planning delicious meals!" : "Subscribe now to unlock unlimited meal planning"}</DialogDescription>
+          <DialogDescription>{isTrialUsed ? "You've used your 2 free meal plans. Subscribe to continue planning delicious meals!" : "Subscribe now to unlock unlimited meal planning"}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">

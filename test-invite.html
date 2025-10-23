@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Test Invite Function</title>
+    <style>
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        max-width: 800px;
+        margin: 50px auto;
+        padding: 20px;
+      }
+      .container {
+        background: #f5f5f5;
+        padding: 20px;
+        border-radius: 8px;
+      }
+      input {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      button {
+        background: #007bff;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background: #0056b3;
+      }
+      pre {
+        background: #2d2d2d;
+        color: #f8f8f2;
+        padding: 15px;
+        border-radius: 4px;
+        overflow-x: auto;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+      .error {
+        color: #d32f2f;
+        background: #ffebee;
+        padding: 10px;
+        border-radius: 4px;
+        margin: 10px 0;
+      }
+      .success {
+        color: #388e3c;
+        background: #e8f5e9;
+        padding: 10px;
+        border-radius: 4px;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Test Invite Edge Function</h1>
+
+      <div>
+        <label>Supabase URL:</label>
+        <input type="text" id="supabaseUrl" placeholder="https://xxxxx.supabase.co" />
+      </div>
+
+      <div>
+        <label>Access Token (from localStorage):</label>
+        <input type="text" id="accessToken" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+        <small>Open your app, then in console run: JSON.parse(localStorage.getItem('sb-YOUR_PROJECT-auth-token')).access_token</small>
+      </div>
+
+      <div>
+        <label>Email to invite:</label>
+        <input type="email" id="email" placeholder="test@example.com" />
+      </div>
+
+      <button onclick="testInvite()">Send Test Invite</button>
+
+      <div id="output"></div>
+
+      <h3>Console Logs:</h3>
+      <pre id="logs"></pre>
+    </div>
+
+    <script>
+      let logs = [];
+
+      function log(message, data) {
+        const timestamp = new Date().toISOString();
+        const logEntry = `[${timestamp}] ${message}`;
+        logs.push(logEntry);
+        if (data) {
+          logs.push(JSON.stringify(data, null, 2));
+        }
+        document.getElementById("logs").textContent = logs.join("\n");
+        console.log(message, data);
+      }
+
+      async function testInvite() {
+        logs = [];
+        const output = document.getElementById("output");
+        output.innerHTML = "<p>Testing...</p>";
+
+        try {
+          const supabaseUrl = document.getElementById("supabaseUrl").value;
+          const accessToken = document.getElementById("accessToken").value;
+          const email = document.getElementById("email").value;
+
+          log("Starting test with:", { supabaseUrl, email, tokenLength: accessToken.length });
+
+          if (!supabaseUrl || !accessToken || !email) {
+            throw new Error("Please fill in all fields");
+          }
+
+          const url = `${supabaseUrl}/functions/v1/send-invites`;
+          log("Calling Edge Function:", { url });
+
+          const response = await fetch(url, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({ emails: [email] }),
+          });
+
+          log("Response received:", {
+            status: response.status,
+            statusText: response.statusText,
+            headers: Object.fromEntries(response.headers.entries()),
+          });
+
+          const responseText = await response.text();
+          log("Raw response text:", responseText);
+
+          let result;
+          try {
+            result = JSON.parse(responseText);
+            log("Parsed response:", result);
+          } catch (e) {
+            log("Failed to parse JSON:", e.message);
+            throw new Error("Server returned invalid JSON: " + responseText);
+          }
+
+          if (!response.ok) {
+            log("Request failed with error:", result);
+            throw new Error(result.error || result.message || "Unknown error");
+          }
+
+          output.innerHTML = `
+          <div class="success">
+            <h3>✅ Success!</h3>
+            <p>Sent: ${result.sent}</p>
+            <p>Failed: ${result.failed}</p>
+            <pre>${JSON.stringify(result, null, 2)}</pre>
+          </div>
+        `;
+        } catch (error) {
+          log("Error occurred:", error.message);
+          output.innerHTML = `
+          <div class="error">
+            <h3>❌ Error</h3>
+            <p>${error.message}</p>
+          </div>
+        `;
+        }
+      }
+    </script>
+  </body>
+</html>

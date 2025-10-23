@@ -22,11 +22,11 @@ import { generateMealPlan } from "@/lib/openai";
 import { getCurrentUser, signOut, onAuthStateChange, getUserProfile, markTutorialAsShown } from "@/lib/auth";
 import { getSavedRecipes } from "@/lib/recipes";
 import { clearShoppingList } from "@/lib/shoppingList";
-import { canGenerateMeals, incrementMealPlanCount, getTrialExpiryDate, isTrialExpired } from "@/lib/subscription";
+import { canGenerateMeals, incrementMealPlanCount } from "@/lib/subscription";
 import type { Meal } from "@/types/meal";
 import type { User } from "@supabase/supabase-js";
 import type { UserProfile } from "@/types/user";
-import { AlertCircle, RefreshCw, ChefHat, Sparkles, RotateCw } from "lucide-react";
+import { AlertCircle, RefreshCw, ChefHat, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type AuthView = "landing" | "signin" | "signup" | "dashboard" | "reset-password" | "how-it-works" | "privacy-policy" | "terms-of-service";
@@ -48,13 +48,6 @@ function App() {
   const [savedRecipeCount, setSavedRecipeCount] = useState(0);
   const [sharedRecipeId, setSharedRecipeId] = useState<string | null>(null);
   const [sharedShoppingListId, setSharedShoppingListId] = useState<string | null>(null);
-  
-  // Store last meal plan parameters for "Show Me More" functionality
-  const [lastMealPlanParams, setLastMealPlanParams] = useState<{
-    numberOfPeople: number;
-    mealType: string;
-    notes: string;
-  } | null>(null);
 
   // Check for shared recipe link or shared shopping list FIRST (before auth check)
   useEffect(() => {
@@ -216,43 +209,25 @@ function App() {
     }
   };
 
-  const handleGenerateMeals = async (numberOfPeople: number, mealType: string, notes: string, keepExisting: boolean = false) => {
+  const handleGenerateMeals = async (numberOfPeople: number, mealType: string, notes: string) => {
     setIsLoading(true);
     setError(null);
-    
-    // Only clear meals if we're not keeping existing ones
-    if (!keepExisting) {
-      setMeals([]);
-    }
+    setMeals([]);
 
     try {
       const generatedMeals = await generateMealPlan(numberOfPeople, mealType, notes);
-      
-      // If keeping existing, append new meals; otherwise replace
-      if (keepExisting) {
-        setMeals(prevMeals => [...prevMeals, ...generatedMeals]);
-      } else {
-        setMeals(generatedMeals);
-      }
-      
+      setMeals(generatedMeals);
       setShowFormModal(false); // Close modal after generating meals
-      
-      // Store the parameters for "Show Me More" functionality
-      setLastMealPlanParams({ numberOfPeople, mealType, notes });
 
       // Increment meal plan count after successful generation
       if (user?.id && userProfile) {
         const { success, newCount } = await incrementMealPlanCount(user.id);
         if (success && newCount !== undefined) {
-          // Check if trial has expired based on date
-          const trialStartDate = userProfile.trial_start_date || new Date().toISOString();
-          const trialExpired = isTrialExpired(trialStartDate);
-          
           // Update local profile state
           setUserProfile({
             ...userProfile,
             meal_plans_generated: newCount,
-            trial_used: trialExpired,
+            trial_used: newCount >= 2, // Mark trial as used when limit reached
           });
         }
       }
@@ -262,30 +237,6 @@ function App() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleShowMeMore = async () => {
-    if (!lastMealPlanParams) return;
-    
-    // Check if user can generate meals before proceeding
-    if (user?.id) {
-      const { canGenerate, reason } = await canGenerateMeals(user.id);
-
-      if (!canGenerate) {
-        // Trial expired or no subscription - show payment modal
-        setShowPaymentModal(true);
-        setError(reason || "Subscription required");
-        return;
-      }
-    }
-    
-    // Resubmit with the same parameters, keeping existing meals
-    await handleGenerateMeals(
-      lastMealPlanParams.numberOfPeople,
-      lastMealPlanParams.mealType,
-      lastMealPlanParams.notes,
-      true // keepExisting = true
-    );
   };
 
   const handlePlanMeals = async () => {
@@ -468,22 +419,6 @@ function App() {
                         <MealCard key={meal.id} meal={meal} onNotInterested={handleMealNotInterested} />
                       ))}
                     </div>
-                    
-                    {/* Show Me More button */}
-                    {lastMealPlanParams && (
-                      <div className="flex justify-center mt-8">
-                        <Button 
-                          onClick={handleShowMeMore} 
-                          disabled={isLoading}
-                          variant="outline" 
-                          size="lg"
-                          className="gap-2 px-8"
-                        >
-                          <RotateCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                          {isLoading ? 'Generating...' : 'Show Me More'}
-                        </Button>
-                      </div>
-                    )}
                   </div>
                 )}
 
@@ -508,12 +443,12 @@ function App() {
                     </Button>
 
                     {/* Free trial indicator */}
-                    {userProfile && !userProfile.subscription_status && userProfile.trial_start_date && (
+                    {userProfile && !userProfile.subscription_status && (
                       <div className="mt-6 text-sm text-muted-foreground">
-                        {!isTrialExpired(userProfile.trial_start_date) ? (
+                        {userProfile.meal_plans_generated !== undefined && userProfile.meal_plans_generated < 2 ? (
                           <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 rounded-full border border-emerald-200 dark:border-emerald-800">
                             <Sparkles className="h-3.5 w-3.5" />
-                            Free trial expires {getTrialExpiryDate(userProfile.trial_start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                            {2 - (userProfile.meal_plans_generated || 0)} free meal plan{2 - (userProfile.meal_plans_generated || 0) === 1 ? "" : "s"} remaining
                           </span>
                         ) : null}
                       </div>

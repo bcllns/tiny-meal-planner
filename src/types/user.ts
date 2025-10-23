@@ -4,7 +4,6 @@ export interface UserProfile {
   full_name: string;
   created_at?: string;
   trial_used?: boolean;
-  trial_start_date?: string;
   meal_plans_generated?: number;
   subscription_status?: string | null;
   subscription_id?: string | null;
