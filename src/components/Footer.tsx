@@ -58,6 +58,7 @@ export function Footer({ onHowItWorks, onPrivacyPolicy, onTermsOfService }: { on
 
         {/* Copyright */}
         <div className="mt-8 pt-6 border-t text-center">
+          {/* Made with <Heart className="h-4 w-4 text-red-500 fill-red-500" /> by Tiny Dev Co © {currentYear} */}
           <p className="text-sm text-gray-600 dark:text-gray-400">Made with 😊 in WLV by Tiny Dev Co. © {currentYear}</p>
         </div>
       </div>
