@@ -3,7 +3,7 @@ import { getNotInterestedRecipes } from "./notInterested";
 import { getSavedRecipes } from "./recipes";
 import { supabase } from "./supabase";
 
-export async function generateMealPlan(numberOfPeople: number, mealType: string = "all", notes: string = ""): Promise<Meal[]> {
+export async function generateMealPlan(currentMeals: Meal[], numberOfPeople: number, mealType: string = "all", notes: string = ""): Promise<Meal[]> {
   if (!supabase) {
     throw new Error("Supabase client is not configured.");
   }
@@ -25,6 +25,10 @@ export async function generateMealPlan(numberOfPeople: number, mealType: string 
   const savedRecipes = await getSavedRecipes();
   const savedRecipeNames = savedRecipes.map((recipe) => recipe.name);
 
+  //if there are current recipes get the names and pass to the function to avoid duplicates
+  const currentRecipeNames = currentMeals.map((meal) => meal.name);
+  console.log("Current recipe names:", currentRecipeNames);
+
   // Call the Supabase Edge Function
   const { data, error } = await supabase.functions.invoke("generate-meal-plan", {
     body: {
@@ -33,6 +37,7 @@ export async function generateMealPlan(numberOfPeople: number, mealType: string 
       notes,
       notInterestedRecipes,
       savedRecipeNames,
+      currentRecipeNames,
     },
   });
 

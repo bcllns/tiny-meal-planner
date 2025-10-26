@@ -223,7 +223,8 @@ function App() {
     setLastFormValues({ numberOfPeople, mealType, notes });
 
     try {
-      const generatedMeals = await generateMealPlan(numberOfPeople, mealType, notes);
+      console.log("Generating meal plan with current meals:", meals);
+      const generatedMeals = await generateMealPlan(meals, numberOfPeople, mealType, notes);
 
       // Append to existing meals or replace them
       if (appendToExisting) {
